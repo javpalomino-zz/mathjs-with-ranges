@@ -1,0 +1,222 @@
+<html>
+  <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.1.1/math.js"></script>
+  </head>
+  <body>
+
+  <input type="text" id="formula">
+  <input type="text" id="response" value="">
+  <button id="submit">Calculate</button>
+
+  <table>
+    <thead>
+    <th># \ L</th>
+    <th>A</th>
+    <th>B</th>
+    <th>C</th>
+    <th>D</th>
+    <th>E</th>
+    <th>F</th>
+    <th>RES</th>
+    </thead>
+    <tbody>
+    <tr>
+      <td>1</td>
+      <td><input id="A1" type="text"></td>
+      <td><input id="B1" type="text"></td>
+      <td><input id="C1" type="text"></td>
+      <td><input id="D1" type="text"></td>
+      <td><input id="E1" type="text"></td>
+      <td><input id="F1" type="text"></td>
+      <td><label></label></td>
+    </tr>
+
+    <tr>
+      <td>2</td>
+      <td><input id="A2" type="text"></td>
+      <td><input id="B2" type="text"></td>
+      <td><input id="C2" type="text"></td>
+      <td><input id="D2" type="text"></td>
+      <td><input id="E2" type="text"></td>
+      <td><input id="F2" type="text"></td>
+      <td><label></label></td>
+    </tr>
+
+    <tr>
+      <td>3</td>
+      <td><input id="A3" type="text"></td>
+      <td><input id="B3" type="text"></td>
+      <td><input id="C3" type="text"></td>
+      <td><input id="D3" type="text"></td>
+      <td><input id="E3" type="text"></td>
+      <td><input id="F3" type="text"></td>
+      <td><label></label></td>
+    </tr>
+
+    <tr>
+      <td>4</td>
+      <td><input id="A4" type="text"></td>
+      <td><input id="B4" type="text"></td>
+      <td><input id="C4" type="text"></td>
+      <td><input id="D4" type="text"></td>
+      <td><input id="E4" type="text"></td>
+      <td><input id="F4" type="text"></td>
+      <td><label></label></td>
+    </tr>
+    </tbody>
+  </table>
+
+  </body>
+  <script>
+
+    var submitButton = document.getElementById('submit');
+
+    /**
+     * @global math
+     */
+    math.import({
+      myvalue: 42,
+      SUM: function () {
+        return math.sum.apply(this, arguments);
+      },
+      CONCAT: function () {
+        var response = '';
+
+        for(var i in arguments) {
+          response += (arguments[i] + "");
+        }
+
+        return response;
+      }
+    });
+
+    function findOperators(formula, i) {
+      var DELIMITER = ['(', ')'];
+      var left = i-1, right = i+1;
+
+      var leftOperator = '';
+      var rightOperator = '';
+
+
+      while(!DELIMITER.includes(formula[left]) && left >= 0) {
+        leftOperator = formula[left] + leftOperator;
+        left--;
+      }
+
+      while(!DELIMITER.includes(formula[right]) && right < formula.length) {
+        rightOperator = rightOperator + formula[right];
+        right++;
+      }
+
+      return {
+        leftIndex: left + 1,
+        left: leftOperator,
+        right: rightOperator,
+        rightIndex: right - 1,
+      }
+    }
+
+    function getAttributes(range) {
+      var left = range.left.trim();
+      var right = range.right.trim();
+
+      var leftStr = left[0];
+      var leftNum = left.substring(1);
+
+      var rightStr = right[0];
+      var rightNum = right[1];
+
+      return {
+        orig: range,
+        left: {
+          str: leftStr,
+          num: leftNum
+        },
+        right: {
+          str: rightStr,
+          num: rightNum
+        }
+      };
+    }
+
+    function replaceRange(s, start, end, substitute) {
+      return s.substring(0, start) + substitute + s.substring(end);
+    }
+
+    function getDetailedRange(range) {
+      var startStr = range.left.str.charCodeAt(0);
+      var startNum = range.left.num;
+
+      var endStr = range.right.str.charCodeAt(0);
+      var endNum = range.right.num;
+
+
+      var list = [];
+
+      for(var i = startNum ; i <= endNum;  ++i) {
+        for(var j = startStr ; j <= endStr ; ++j) {
+          list.push(String.fromCharCode(j) + ("" + i));
+        }
+      }
+
+
+      return list.join(",");
+    }
+
+    function clean(str) {
+      var formula = str.split("");
+      var SEPARATOR = ':';
+
+      for(var i = 0 ; i < formula.length ; ++i) {
+        if(formula[i] === SEPARATOR) {
+          var range = findOperators(formula, i);
+          var fullRange = getAttributes(range);
+          var toChange = getDetailedRange(fullRange);
+
+          str = replaceRange(str, range.leftIndex, range.rightIndex + 1, toChange);
+          formula = str.split("");
+        }
+      }
+
+      return str;
+    }
+
+    submitButton.addEventListener('click', function () {
+      var fields = [];
+
+      for(var i = 1 ; i < 5 ; ++i) {
+        for(var j = 65 ; j < 71 ; ++j) {
+          fields.push(String.fromCharCode(j)+i);
+        }
+      }
+
+      var formulaInput = document.getElementById('formula');
+      var formula = formulaInput.value;
+
+      formula = clean(formula);
+
+      for(var i = 0 ; i < fields.length ; ++i) {
+        var newValue = document.getElementById(fields[i]).value;
+
+        if(!newValue) {
+          newValue = 0;
+        }
+
+        formula = formula.replace(new RegExp(fields[i], 'g'), isNaN(newValue) ?  "'" + newValue +"'" : newValue);
+      }
+
+      var parser = math.parser(), response;
+
+      try {
+        parser.set('txt', '1');
+
+        response = parser.eval(formula);
+      }
+      catch (e) {
+        response = 'error wey!';
+      }
+
+      document.getElementById('response').value = response;
+    });
+  </script>
+</html>
